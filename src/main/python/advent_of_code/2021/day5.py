@@ -73,6 +73,7 @@ class Line:
 def run(file_path: str, comparison: Callable[[Line], bool]):
     with open(file_path, 'r') as file:
         vents = [Line().add_points(line.replace('\n', '')) for line in file.readlines()]
+        # This is to allow the first and second to run with mostly the same code ;)
         vents_to_check = [vent for vent in vents if comparison(vent)]
         for i in range(len(vents_to_check)):
             for j in range(i+1, len(vents_to_check)):
