@@ -1,72 +1,133 @@
-from __future__ import annotations
-
-import os.path
-from typing import List
 from utils import get_file
+from typing import List
 
 
-class Directory:
-    name: str
-    parent: Directory
-    size: int
-    children: List
+class Tree:
 
-    def __init__(self, name, parent = None, size = 0):
-        self.name = name
-        self.parent = parent
-        self.size = size
-        self.children = []
+    visited: bool
+    height: int
+
+    def __init__(self, height: str):
+        self.height = int(height)
+        self.visited = False
+
+    def was_visited(self):
+        return self.visited
+
+    def __str__(self):
+        return f'{self.visited}: {self.height}'
+
+
+def walk_row(row:List[Tree], reverse = False):
+    ret = 0
+    if reverse:
+        row.reverse()
+    tallest = row[0].height
+    for i in range(1, len(row)-1):
+        if row[i].height > tallest:
+            tallest = row[i].height
+            if not row[i].was_visited():
+                row[i].visited = True
+                ret += 1
+    if reverse:
+        row.reverse()
+    return ret
+
+
+def find_tallest(grid, count):
+    ret = 0
+    for i in range(1, len(grid)-1):
+        ret += walk_row(grid[i])
+        ret += walk_row(grid[i], reverse=True)
+
+    return ret
 
 
 if __name__ == '__main__':
-    with get_file('day7.txt') as input:
+    with get_file('day8.txt') as input:
         lines = input.readlines()
-        directories = {}
-        cur_dir = Directory('/')
-        directories[cur_dir.name] = cur_dir
+
+        grid = []
 
         for line in lines:
             cleaned_line = line.strip()
-            info = cleaned_line.split(' ')
-            if info[0] == 'dir':
-                name = os.path.join(cur_dir.name, info[1])
-                if name not in directories:
-                    dir = Directory(name, cur_dir)
-                    directories[dir.name] = dir
-            elif info[1] == 'cd':
-                if info[2] == '..':
-                    cur_dir = cur_dir.parent
-                else:
-                    name = os.path.join(cur_dir.name, info[2])
-                    cur_dir = directories[name]
-            elif info[1] == 'ls':
+            grid.append([Tree(v) for v in cleaned_line])
+
+        width = len(grid[0])
+        length = len(grid)
+
+        grid_edge = (width * 2) + (2*(length - 2))
+
+        search = 0
+
+        if width % 2 == 0:
+            search = int(width/2)
+        else:
+            search = int(width/2 + 1)
+
+        total_viewable = grid_edge
+
+        total_viewable += find_tallest(grid, total_viewable)
+
+        rotated_grid = list(map(list, zip(*grid)))
+
+        total_viewable += find_tallest(rotated_grid, total_viewable)
+
+        print(f'Total: {total_viewable}')
+
+        most_scenic = 0
+
+        for row_idx, row in enumerate(grid):
+            if row_idx == 0 or row_idx == len(grid) - 1:
                 continue
-            else:
-                size = int(info[0])
-                cur_dir.size += size
-                cur_dir.children.append(info[1])
-                par_dir = cur_dir.parent
-                while par_dir:
-                    if par_dir:
-                        par_dir.size += size
-                        par_dir = par_dir.parent
+            for i, tree in enumerate(row):
+                if i == 0 or i == len(row) - 1:
+                    continue
+                ret = 1
+                loc = i + 1
+                num_to_see = 1
+                while loc < len(row) - 1:
+                    if tree.height > row[loc].height:
+                        num_to_see += 1
+                    else:
+                        break
+                    loc += 1
+                ret = ret * num_to_see
+                loc = i - 1
+                num_to_see = 1
+                while loc >= 1:
+                    if tree.height > row[loc].height:
+                        num_to_see += 1
+                    else:
+                        break
+                    loc -= 1
+                ret = ret * num_to_see
+                loc = row_idx + 1
+                num_to_see = 1
+                while loc < len(grid) - 1:
+                    if tree.height > grid[loc][i].height:
+                        num_to_see += 1
+                    else:
+                        break
+                    loc += 1
+                ret = ret * num_to_see
+                loc = row_idx - 1
+                num_to_see = 1
+                while loc >= 1:
+                    if tree.height > grid[loc][i].height:
+                        num_to_see += 1
+                    else:
+                        break
+                    loc -= 1
+                ret = ret * num_to_see
+                if ret > most_scenic:
+                    most_scenic = ret
 
-        total_size = 0
-        for v in directories.values():
-            if v.size <= 100000:
-                total_size += v.size
+        print(f'Most Scenic: {most_scenic}')
 
-        print(total_size)
 
-        remaining = 70000000 - directories['/'].size
-        size_needed = 30000000 - remaining
 
-        val_list = [v.size for v in directories.values()]
-        val_list.sort()
-        for v in val_list:
-            if v > size_needed:
-                print(v)
-                break
+
 
 
 
